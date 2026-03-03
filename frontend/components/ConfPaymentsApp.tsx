@@ -50,7 +50,16 @@ const PRIVATE_BALANCE_CACHE_PREFIX = "conf_payments_private_balance";
 const PRIVATE_BALANCE_LAST_KEY = "conf_payments_private_balance_last";
 const TRANSFER_EVENT = parseAbiItem("event Transfer(address indexed from, address indexed to, bytes32 amount)");
 const WRAPPED_EVENT = parseAbiItem("event WrappedUSDC(address indexed user, uint256 amount)");
-const TOKEN_DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_PAYMENT_TOKEN_DEPLOY_BLOCK || "38317018");
+function resolveTokenDeployBlock() {
+  const raw = process.env.NEXT_PUBLIC_PAYMENT_TOKEN_DEPLOY_BLOCK;
+  if (!raw) return BigInt(38317018);
+  try {
+    return BigInt(raw.trim());
+  } catch {
+    return BigInt(38317018);
+  }
+}
+const TOKEN_DEPLOY_BLOCK = resolveTokenDeployBlock();
 
 function mergeTxRows(current: Tx[], incoming: Tx[]) {
   const byId = new Map<string, Tx>();
