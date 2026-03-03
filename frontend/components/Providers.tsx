@@ -9,7 +9,9 @@ import { ThemeProvider } from "next-themes";
 import { baseSepolia } from "wagmi/chains";
 
 const queryClient = new QueryClient();
-const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "";
+const appId = (process.env.NEXT_PUBLIC_PRIVY_APP_ID || process.env.PRIVY_APP_ID || "")
+  .trim()
+  .replace(/^['"]|['"]$/g, "");
 const hasValidPrivyAppId = Boolean(appId && !appId.includes("<"));
 
 const config = createConfig({
