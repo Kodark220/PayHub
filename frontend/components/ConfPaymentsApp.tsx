@@ -392,6 +392,25 @@ export function ConfPaymentsApp() {
             : "Wallet transfer";
       const cryptoValue = sendCurrency === "ETH" ? `${sendUsdcEq} ETH` : `${sendUsdcEq} USDC`;
       setTxs((p) => [{id: `${Date.now()}`, kind: sendCurrency === "NGN" ? "bank" : "send", title: sendAcctName || sendRecipient || "Transfer", time: "Now", local: localValue, usdc: cryptoValue}, ...p]);
+      if (address) {
+        try {
+          await fetch("/api/history", {
+            method: "POST",
+            headers: {"content-type": "application/json"},
+            body: JSON.stringify({
+              wallet: address,
+              type: sendCurrency === "NGN" ? "bank" : "send",
+              title: sendAcctName || sendRecipient || "Transfer",
+              localAmount: sendCurrency === "NGN" ? Number(sendAmount || 0) : Number((Number(sendUsdcEq || 0) * ngnPerUsdc).toFixed(2)),
+              localCurrency: "NGN",
+              usdcAmount: sendCurrency === "ETH" ? 0 : Number(sendUsdcEq || 0),
+              status: "submitted"
+            })
+          });
+        } catch {
+          // non-blocking persistence
+        }
+      }
       setShowConfirm(false);
       setView("home");
       setTab("home");
