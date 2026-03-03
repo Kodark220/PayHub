@@ -168,8 +168,9 @@ export function ConfPaymentsApp() {
   useEffect(() => {
     if (!ready) return;
     if (!authenticated) return;
-    if (["welcome", "signup", "verify"].includes(view)) {
-      setView("profileSetup");
+    if (["landing", "welcome", "signup", "verify", "profileSetup", "fund"].includes(view)) {
+      setView("home");
+      setTab("home");
     }
   }, [authenticated, ready, view]);
 
