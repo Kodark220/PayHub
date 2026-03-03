@@ -1,0 +1,4 @@
+{
+  "installCommand": "cd frontend && npm install --include=optional --workspaces=false",
+  "buildCommand": "cd frontend && npm run build"
+}
