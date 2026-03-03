@@ -1,0 +1,26 @@
+[
+  {
+    "type": "function",
+    "name": "balanceOf",
+    "stateMutability": "view",
+    "inputs": [{ "name": "wallet", "type": "address" }],
+    "outputs": [{ "name": "", "type": "uint256", "internalType": "euint256" }]
+  },
+  {
+    "type": "function",
+    "name": "wrapUSDC",
+    "stateMutability": "nonpayable",
+    "inputs": [{ "name": "amount", "type": "uint256" }],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "transfer",
+    "stateMutability": "payable",
+    "inputs": [
+      { "name": "to", "type": "address" },
+      { "name": "encryptedAmount", "type": "bytes" }
+    ],
+    "outputs": [{ "name": "", "type": "bool" }]
+  }
+]

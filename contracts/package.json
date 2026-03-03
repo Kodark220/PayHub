@@ -1,0 +1,21 @@
+{
+  "name": "contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "forge build",
+    "test": "forge test -vvv",
+    "deploy:local": "forge script script/DeployConfLottery.s.sol --rpc-url http://localhost:8545 --broadcast",
+    "deploy:testnet": "forge script script/DeployConfLottery.s.sol --rpc-url $BASE_SEPOLIA_RPC_URL --broadcast",
+    "deploy:token:local": "forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast",
+    "deploy:token:testnet": "forge script script/Deploy.s.sol --rpc-url $BASE_SEPOLIA_RPC_URL --broadcast",
+    "node": "docker compose up"
+  },
+  "dependencies": {
+    "@inco/lightning": "^0.7.10",
+    "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^5.4.0",
+    "ds-test": "https://github.com/dapphub/ds-test",
+    "forge-std": "https://github.com/foundry-rs/forge-std"
+  }
+}
