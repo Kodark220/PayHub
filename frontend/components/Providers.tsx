@@ -94,7 +94,14 @@ const Providers = ({ children }: { children: ReactNode }) => {
           {core}
         </PrivyProvider>
       ) : (
-        core
+        <div className="min-h-screen bg-[#0A0A0A] p-6 text-white">
+          <div className="mx-auto mt-20 w-full max-w-[420px] rounded-2xl border border-[#1F1F1F] bg-[#111111] p-5">
+            <p className="text-lg font-semibold">Missing Privy Config</p>
+            <p className="mt-2 text-sm text-[#A0A0A0]">
+              Set <code className="text-[#FF8C3A]">NEXT_PUBLIC_PRIVY_APP_ID</code> in your environment and redeploy.
+            </p>
+          </div>
+        </div>
       )}
     </ThemeProvider>
   );
