@@ -16,6 +16,7 @@ import {
   Lock,
   Search,
   Settings,
+  Share2,
   Shield,
   UserCircle2
 } from "lucide-react";
@@ -67,6 +68,19 @@ function mergeTxRows(current: Tx[], incoming: Tx[]) {
     byId.set(tx.id, tx);
   }
   return Array.from(byId.values());
+}
+
+function buildReceiptText(t: Tx) {
+  return [
+    "PayHub Receipt",
+    `Type: ${t.kind.toUpperCase()}`,
+    `Recipient/Title: ${t.title}`,
+    `Time: ${t.time}`,
+    `Local Amount: ${t.local}`,
+    `Crypto Amount: ${t.usdc}`,
+    "Status: Submitted",
+    "Note: Private transfer details may be encrypted."
+  ].join("\n");
 }
 
 export function ConfPaymentsApp() {
@@ -375,6 +389,23 @@ export function ConfPaymentsApp() {
     if (k === "." && sendAmount.includes(".")) return;
     setSendAmount((v) => (v.length < 12 ? `${v}${k}` : v));
   }
+
+  async function shareTxReceipt(t: Tx) {
+    const text = buildReceiptText(t);
+    try {
+      const nav = typeof window !== "undefined" ? window.navigator : undefined;
+      if (nav && typeof nav.share === "function") {
+        await nav.share({title: "PayHub Receipt", text});
+      } else if (nav?.clipboard) {
+        await nav.clipboard.writeText(text);
+        toast.success("Receipt copied to clipboard");
+      } else {
+        toast.error("Sharing not supported on this device");
+      }
+    } catch {
+      // user may cancel native share sheet
+    }
+  }
   async function doSend() {
     try {
       if (sendCurrency === "USDC") await sendPrivate(sendRecipient as Address, sendAmount);
@@ -563,7 +594,7 @@ export function ConfPaymentsApp() {
             <div className="mt-3 flex gap-2"><button className="flex-1 rounded-xl border border-white/30 py-2 text-xs" onClick={() => setShowAddMoney(true)}>Add USDC</button><button className="flex-1 rounded-xl border border-white/30 py-2 text-xs" onClick={() => { setSendCurrency("USDC"); setView("send"); }}>Send to Wallet</button></div>
           </motion.div>
           <div className="grid grid-cols-4 gap-2">{[{k: "Send", i: ArrowUpRight, v: "send"}, {k: "Receive", i: ArrowDownLeft, v: "receive"}, {k: "Card", i: CreditCard, v: "card"}, {k: "History", i: Clock3, v: "history"}].map((a) => { const I = a.i; return <button key={a.k} className="rounded-xl border border-[#1F1F1F] bg-[#111111] py-3" onClick={() => { setView(a.v as View); if (["card", "history"].includes(a.v)) setTab(a.v as Tab); }}><I className="mx-auto mb-1 text-[#FF6B00]" size={16} /><p className="text-xs">{a.k}</p></button>; })}</div>
-          <div><div className="mb-2 flex items-center justify-between"><p className="text-sm">Recent</p><button className="text-xs text-[#FF6B00]" onClick={() => { setView("history"); setTab("history"); }}>See all</button></div><div className="space-y-2">{txs.slice(0, 3).map((t) => <TxCard key={t.id} t={t} />)}</div></div>
+          <div><div className="mb-2 flex items-center justify-between"><p className="text-sm">Recent</p><button className="text-xs text-[#FF6B00]" onClick={() => { setView("history"); setTab("history"); }}>See all</button></div><div className="space-y-2">{txs.slice(0, 3).map((t) => <TxCard key={t.id} t={t} onShare={shareTxReceipt} />)}</div></div>
         </section>
       )}
 
@@ -571,7 +602,7 @@ export function ConfPaymentsApp() {
       {view === "receive" && <ReceiveNairaScreen back={() => setView("home")} />}
       {view === "bank" && <BankScreen back={() => setView("home")} bankAmount={bankAmount} setBankAmount={setBankAmount} bankCurrency={bankCurrency} setBankCurrency={setBankCurrency} bankName={bankName} setBankName={setBankName} bankAcct={bankAcct} setBankAcct={setBankAcct} bankAcctName={bankAcctName} setBankAcctName={setBankAcctName} bankQuote={bankQuote} busyBank={busyBank} submit={doBank} fiatMode={fiatMode} />}
       {view === "card" && <CardScreen freeze={freeze} setFreeze={setFreeze} showCard={showCard} setShowCard={setShowCard} />}
-      {view === "history" && <HistoryScreen filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} history={history} walletUsdcBalance={walletUsdcBalance} walletEthBalance={walletEthBalance} />}
+      {view === "history" && <HistoryScreen filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} history={history} walletUsdcBalance={walletUsdcBalance} walletEthBalance={walletEthBalance} onShare={shareTxReceipt} />}
       {view === "notifications" && <NotificationsScreen back={() => setView("home")} />}
       {view === "profile" && <ProfileScreen name={name} address={address} fiatMode={fiatMode} cardMode={cardMode} onDisconnect={() => { disconnect(); logout(); }} />}
 
@@ -731,6 +762,11 @@ function Landing({
               Learn More
             </button>
           </div>
+          <div className="mt-3 rounded-xl border border-[#1F1F1F] bg-[#111111]/70 px-3 py-2">
+            <p className="text-[11px] text-[#A0A0A0]">
+              Compliance-first: fiat payouts run through KYC/AML checks with regulated payment partners.
+            </p>
+          </div>
           {requireInvite && (
             <div className="mt-3 rounded-2xl border border-[#1F1F1F] bg-[#111111]/80 p-3">
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#8D8D8D]">Private Beta Invite</p>
@@ -868,8 +904,8 @@ function displayTxTitle(title: string) {
   return candidate || "Transfer";
 }
 
-function HistoryScreen({filter, setFilter, search, setSearch, history, walletUsdcBalance, walletEthBalance}: any) {
-  return <section className="space-y-3"><p className="text-xl font-semibold">History</p><div className="grid grid-cols-2 gap-2 rounded-xl border border-[#1F1F1F] bg-[#111111] p-2 text-xs"><div className="rounded-lg border border-[#1F1F1F] bg-[#0A0A0A] p-2"><p className="text-[#A0A0A0]">Wallet USDC</p><p>{Number(walletUsdcBalance || 0).toFixed(4)} USDC</p></div><div className="rounded-lg border border-[#1F1F1F] bg-[#0A0A0A] p-2"><p className="text-[#A0A0A0]">Wallet ETH</p><p>{Number(walletEthBalance || 0).toFixed(6)} ETH</p></div></div><div className="flex gap-3 text-sm">{[["all", "All"], ["send", "Send"], ["receive", "Receive"], ["card", "Card"]].map(([k, l]) => <button key={k} className={`border-b-2 pb-1 ${filter === k ? "border-[#FF6B00] text-[#FF6B00]" : "border-transparent text-[#A0A0A0]"}`} onClick={() => setFilter(k)}>{l}</button>)}</div><div className="flex items-center gap-2 rounded-xl border border-[#1F1F1F] bg-[#111111] px-3 py-2"><Search size={16} className="text-[#A0A0A0]" /><input className="w-full bg-transparent text-sm outline-none" placeholder="Search transactions" value={search} onChange={(e) => setSearch(e.target.value)} /></div><div className="space-y-2">{history.map((t: Tx) => <div key={t.id} className="flex w-full items-center justify-between rounded-xl border border-[#1F1F1F] bg-[#111111] p-3 text-left"><div className="flex min-w-0 flex-1 items-center gap-2">{t.kind === "send" || t.kind === "bank" ? <ArrowUpRight className="shrink-0 text-[#FF6B00]" size={16} /> : t.kind === "receive" ? <ArrowDownLeft className="shrink-0 text-white" size={16} /> : <CreditCard className="shrink-0 text-[#FF6B00]" size={16} />}<div className="min-w-0"><p className="truncate text-sm" title={t.title}>{displayTxTitle(t.title)}</p><p className="text-xs text-[#A0A0A0]">{t.time}</p></div></div><div className="ml-3 shrink-0 text-right"><p className="text-sm">{t.local}</p><p className="text-xs text-[#A0A0A0]">{t.usdc}</p></div></div>)}</div></section>;
+function HistoryScreen({filter, setFilter, search, setSearch, history, walletUsdcBalance, walletEthBalance, onShare}: any) {
+  return <section className="space-y-3"><p className="text-xl font-semibold">History</p><div className="grid grid-cols-2 gap-2 rounded-xl border border-[#1F1F1F] bg-[#111111] p-2 text-xs"><div className="rounded-lg border border-[#1F1F1F] bg-[#0A0A0A] p-2"><p className="text-[#A0A0A0]">Wallet USDC</p><p>{Number(walletUsdcBalance || 0).toFixed(4)} USDC</p></div><div className="rounded-lg border border-[#1F1F1F] bg-[#0A0A0A] p-2"><p className="text-[#A0A0A0]">Wallet ETH</p><p>{Number(walletEthBalance || 0).toFixed(6)} ETH</p></div></div><div className="flex gap-3 text-sm">{[["all", "All"], ["send", "Send"], ["receive", "Receive"], ["card", "Card"]].map(([k, l]) => <button key={k} className={`border-b-2 pb-1 ${filter === k ? "border-[#FF6B00] text-[#FF6B00]" : "border-transparent text-[#A0A0A0]"}`} onClick={() => setFilter(k)}>{l}</button>)}</div><div className="flex items-center gap-2 rounded-xl border border-[#1F1F1F] bg-[#111111] px-3 py-2"><Search size={16} className="text-[#A0A0A0]" /><input className="w-full bg-transparent text-sm outline-none" placeholder="Search transactions" value={search} onChange={(e) => setSearch(e.target.value)} /></div><div className="space-y-2">{history.map((t: Tx) => <div key={t.id} className="flex w-full items-center justify-between rounded-xl border border-[#1F1F1F] bg-[#111111] p-3 text-left"><div className="flex min-w-0 flex-1 items-center gap-2">{t.kind === "send" || t.kind === "bank" ? <ArrowUpRight className="shrink-0 text-[#FF6B00]" size={16} /> : t.kind === "receive" ? <ArrowDownLeft className="shrink-0 text-white" size={16} /> : <CreditCard className="shrink-0 text-[#FF6B00]" size={16} />}<div className="min-w-0"><p className="truncate text-sm" title={t.title}>{displayTxTitle(t.title)}</p><p className="text-xs text-[#A0A0A0]">{t.time}</p></div></div><div className="ml-3 shrink-0 text-right"><p className="text-sm">{t.local}</p><p className="text-xs text-[#A0A0A0]">{t.usdc}</p><button className="mt-1 inline-flex items-center gap-1 text-[11px] text-[#FF8C3A]" onClick={() => onShare?.(t)}><Share2 size={12} />Share</button></div></div>)}</div></section>;
 }
 
 function NotificationsScreen({back}: {back: () => void}) {
@@ -880,8 +916,8 @@ function ProfileScreen({name, address, fiatMode, cardMode, onDisconnect}: any) {
   return <section className="space-y-3"><div className="text-center"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full border-2 border-[#FF6B00] bg-[#111111]"><UserCircle2 /></div><p className="mt-2">{name || "Set your name"}</p><p className="text-xs text-[#A0A0A0]">{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "wallet not connected"}</p></div><div className="rounded-xl border border-[#1F1F1F] bg-[#111111] p-3"><p className="mb-2 text-sm font-medium">Environment Mode</p><div className="grid grid-cols-2 gap-2 text-xs"><div className="rounded-lg border border-[#1F1F1F] bg-[#0A0A0A] p-2"><p className="text-[#A0A0A0]">Fiat payouts</p><p className={fiatMode === "live" ? "text-white" : "text-[#FF8C3A]"}>{String(fiatMode || "beta").toUpperCase()}</p></div><div className="rounded-lg border border-[#1F1F1F] bg-[#0A0A0A] p-2"><p className="text-[#A0A0A0]">Card webhooks</p><p className={cardMode === "live" ? "text-white" : "text-[#FF8C3A]"}>{String(cardMode || "beta").toUpperCase()}</p></div></div>{(fiatMode !== "live" || cardMode !== "live") && <p className="mt-2 text-xs text-[#FF8C3A]">Beta mode enabled: payouts and card events are simulated.</p>}</div>{[["Account", ["Edit Profile", "Change Currency", "Linked Bank Accounts", "KYC Status: Verified"]], ["Card", ["Virtual Card Details", "Order Physical Card", "Card Limits", "Freeze / Unfreeze"]], ["Security", ["Change PIN", "Biometric Login", "Connected Wallets", "Active Sessions"]], ["Privacy", ["Balance Visibility", "Transaction Visibility", "Your balances are always encrypted onchain"]], ["Support", ["Help Center", "Contact Support", "Join Discord"]]].map(([title, items]) => <div key={title as string} className="rounded-xl border border-[#1F1F1F] bg-[#111111] p-3"><p className="mb-2 text-sm font-medium">{title as string}</p>{(items as string[]).map((item) => <p key={item} className={`py-1 text-sm ${item.includes("encrypted") ? "text-[#FF8C3A]" : "text-[#A0A0A0]"}`}>{item}</p>)}</div>)}<button className="w-full rounded-xl border border-[#FF6B00] py-3 text-[#FF6B00]" onClick={onDisconnect}>Disconnect Wallet</button></section>;
 }
 
-function TxCard({t}: {t: Tx}) {
-  return <div className="flex items-center justify-between rounded-xl border border-[#1F1F1F] bg-[#111111] p-3"><div className="flex min-w-0 flex-1 items-center gap-2">{t.kind === "send" || t.kind === "bank" ? <ArrowUpRight className="shrink-0 text-[#FF6B00]" size={15} /> : <ArrowDownLeft className="shrink-0 text-white" size={15} />}<div className="min-w-0"><p className="truncate text-sm" title={t.title}>{displayTxTitle(t.title)}</p><p className="text-xs text-[#A0A0A0]">{t.time}</p></div></div><div className="ml-3 shrink-0 text-right"><p className="text-sm">{t.local}</p><p className="text-xs text-[#A0A0A0]">{t.usdc}</p></div></div>;
+function TxCard({t, onShare}: {t: Tx; onShare?: (tx: Tx) => void}) {
+  return <div className="flex items-center justify-between rounded-xl border border-[#1F1F1F] bg-[#111111] p-3"><div className="flex min-w-0 flex-1 items-center gap-2">{t.kind === "send" || t.kind === "bank" ? <ArrowUpRight className="shrink-0 text-[#FF6B00]" size={15} /> : <ArrowDownLeft className="shrink-0 text-white" size={15} />}<div className="min-w-0"><p className="truncate text-sm" title={t.title}>{displayTxTitle(t.title)}</p><p className="text-xs text-[#A0A0A0]">{t.time}</p></div></div><div className="ml-3 shrink-0 text-right"><p className="text-sm">{t.local}</p><p className="text-xs text-[#A0A0A0]">{t.usdc}</p><button className="mt-1 inline-flex items-center gap-1 text-[11px] text-[#FF8C3A]" onClick={() => onShare?.(t)}><Share2 size={12} />Share</button></div></div>;
 }
 
 function ConfirmSheet({sendCurrency, sendAmount, sendRecipient, sendUsdcEq, onClose, onConfirm}: any) {
